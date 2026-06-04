@@ -12,7 +12,7 @@ from typing import Any, Optional, Union
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel, Field
@@ -302,6 +302,61 @@ def create_demo_avatar(fio: str, color: str) -> str:
     image.save(buffer, format="PNG")
     encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
     return f"data:image/png;base64,{encoded}"
+
+
+def get_pdf_font(size: int) -> ImageFont.ImageFont:
+    """
+    Подбирает шрифт с поддержкой кириллицы для PDF-заключения.
+    На Render обычно есть DejaVu Sans, на macOS - системные шрифты Apple/Arial.
+    """
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial Unicode.ttf",
+    ]
+    for font_path in font_paths:
+        try:
+            return ImageFont.truetype(font_path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def draw_wrapped_text(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    xy: tuple[int, int],
+    font: ImageFont.ImageFont,
+    fill: str,
+    max_width: int,
+    line_gap: int = 8,
+) -> int:
+    """
+    Рисует длинный текст с переносами и возвращает новую Y-координату.
+    Это нужно для аккуратного PDF без HTML-рендера и внешних сервисов.
+    """
+    x, y = xy
+    words = str(text or "").replace("\n", " ").split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        bbox = draw.textbbox((0, 0), candidate, font=font)
+        if bbox[2] - bbox[0] <= max_width or not current:
+            current = candidate
+        else:
+            lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+
+    for line in lines or [""]:
+        draw.text((x, y), line, fill=fill, font=font)
+        bbox = draw.textbbox((0, 0), line or "A", font=font)
+        y += bbox[3] - bbox[1] + line_gap
+    return y
 
 
 def decode_image_to_array(image_data: str) -> np.ndarray:
@@ -738,6 +793,272 @@ def latest_lab_result(iin: str) -> dict[str, Any]:
             (iin,),
         ).fetchone()
     return {"lab": dict(row) if row else None}
+
+
+def load_person_timeline(iin: str) -> dict[str, Any]:
+    """
+    Собирает единую медицинскую историю по ИИН.
+
+    Для пациента возвращает анализы и онлайн-диагностику, для сотрудника -
+    историю предсменных медосмотров. В реальной платформе эти роли можно
+    объединить в одну таблицу пользователей, но для MVP оставляем монолит простым.
+    """
+    with get_db() as conn:
+        patient = conn.execute(
+            "SELECT id, fio, iin, phone, photo_template FROM patients WHERE iin = ?",
+            (iin,),
+        ).fetchone()
+        employee = conn.execute(
+            "SELECT id, fio, iin, photo_template FROM employees WHERE iin = ?",
+            (iin,),
+        ).fetchone()
+
+        labs: list[dict[str, Any]] = []
+        diagnoses: list[dict[str, Any]] = []
+        medical_sessions: list[dict[str, Any]] = []
+
+        if patient:
+            labs = [
+                dict(row)
+                for row in conn.execute(
+                    """
+                    SELECT *
+                    FROM lab_results
+                    WHERE patient_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT 12
+                    """,
+                    (patient["id"],),
+                ).fetchall()
+            ]
+            diagnosis_rows = conn.execute(
+                """
+                SELECT
+                    dr.*,
+                    lr.lab_type,
+                    lr.ai_summary AS lab_summary
+                FROM diagnosis_requests dr
+                LEFT JOIN lab_results lr ON lr.id = dr.lab_result_id
+                WHERE dr.patient_id = ?
+                ORDER BY dr.created_at DESC
+                LIMIT 12
+                """,
+                (patient["id"],),
+            ).fetchall()
+            diagnoses = []
+            for row in diagnosis_rows:
+                item = dict(row)
+                item["symptoms"] = json.loads(item["symptoms"] or "[]")
+                diagnoses.append(item)
+
+        if employee:
+            medical_sessions = [
+                dict(row)
+                for row in conn.execute(
+                    """
+                    SELECT *
+                    FROM medical_sessions
+                    WHERE employee_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT 12
+                    """,
+                    (employee["id"],),
+                ).fetchall()
+            ]
+
+    profile = dict(patient) if patient else dict(employee) if employee else None
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Человек с таким ИИН не найден")
+    if patient:
+        profile["role"] = "Пациент"
+    else:
+        profile["role"] = "Сотрудник"
+        profile["phone"] = "Не указан"
+
+    return {
+        "profile": profile,
+        "labs": labs,
+        "diagnoses": diagnoses,
+        "medical_sessions": medical_sessions,
+    }
+
+
+@app.get("/api/person/{iin}/timeline")
+def person_timeline(iin: str) -> dict[str, Any]:
+    """Возвращает цифровую карту пациента/сотрудника для кабинета и врача."""
+    return load_person_timeline(iin)
+
+
+def build_conclusion_pdf(timeline: dict[str, Any]) -> bytes:
+    """
+    Генерирует простое PDF-заключение как изображение.
+
+    Подход выбран специально для MVP: Pillow уже используется в проекте,
+    а PDF не зависит от браузера, wkhtmltopdf или платных сервисов.
+    """
+    profile = timeline["profile"]
+    latest_diagnosis = timeline["diagnoses"][0] if timeline["diagnoses"] else None
+    latest_lab = timeline["labs"][0] if timeline["labs"] else None
+    latest_medical = (
+        timeline["medical_sessions"][0] if timeline["medical_sessions"] else None
+    )
+
+    width, height = 1240, 1754
+    image = Image.new("RGB", (width, height), "#fbfbfd")
+    draw = ImageDraw.Draw(image)
+    title_font = get_pdf_font(44)
+    section_font = get_pdf_font(28)
+    bold_font = get_pdf_font(23)
+    text_font = get_pdf_font(21)
+    small_font = get_pdf_font(17)
+
+    draw.rounded_rectangle((64, 54, width - 64, 214), radius=28, fill="#ffffff")
+    draw.text((96, 82), "mydoctor", fill="#0071e3", font=title_font)
+    draw.text(
+        (96, 142),
+        "Цифровое медицинское заключение MVP",
+        fill="#1d1d1f",
+        font=section_font,
+    )
+    draw.text(
+        (width - 360, 92),
+        datetime.now().strftime("%Y-%m-%d %H:%M"),
+        fill="#6e6e73",
+        font=small_font,
+    )
+
+    y = 260
+    draw.text((82, y), "Пациент / сотрудник", fill="#1d1d1f", font=section_font)
+    y += 44
+    draw.rounded_rectangle((64, y, width - 64, y + 178), radius=22, fill="#ffffff")
+    y += 28
+    profile_lines = [
+        f"ФИО: {profile['fio']}",
+        f"ИИН: {profile['iin']}",
+        f"Роль: {profile['role']}",
+        f"Телефон: {profile.get('phone', 'Не указан')}",
+    ]
+    for line in profile_lines:
+        draw.text((96, y), line, fill="#1d1d1f", font=text_font)
+        y += 36
+
+    y += 42
+    draw.text((82, y), "Последнее ИИ-заключение", fill="#1d1d1f", font=section_font)
+    y += 44
+    draw.rounded_rectangle((64, y, width - 64, y + 370), radius=22, fill="#ffffff")
+    y += 28
+    if latest_diagnosis:
+        draw.text(
+            (96, y),
+            f"Триаж: {latest_diagnosis['ai_triage']} | Статус врача: {latest_diagnosis['doctor_status']}",
+            fill="#0071e3",
+            font=bold_font,
+        )
+        y += 46
+        y = draw_wrapped_text(
+            draw,
+            f"Жалоба: {latest_diagnosis['complaint']}",
+            (96, y),
+            text_font,
+            "#1d1d1f",
+            width - 192,
+        )
+        y = draw_wrapped_text(
+            draw,
+            f"Предварительно: {latest_diagnosis['ai_diagnosis']}",
+            (96, y + 8),
+            text_font,
+            "#1d1d1f",
+            width - 192,
+        )
+        y = draw_wrapped_text(
+            draw,
+            f"Рекомендации: {latest_diagnosis['ai_recommendations']}",
+            (96, y + 8),
+            text_font,
+            "#3a3a3c",
+            width - 192,
+        )
+    else:
+        draw.text(
+            (96, y),
+            "Онлайн-диагностика еще не проходилась.",
+            fill="#6e6e73",
+            font=text_font,
+        )
+        y += 280
+
+    y = 960
+    draw.text((82, y), "Анализы и медосмотры", fill="#1d1d1f", font=section_font)
+    y += 44
+    draw.rounded_rectangle((64, y, width - 64, y + 330), radius=22, fill="#ffffff")
+    y += 28
+    if latest_lab:
+        draw.text(
+            (96, y),
+            f"Анализ: {latest_lab['lab_type']} от {latest_lab['created_at']}",
+            fill="#1d1d1f",
+            font=bold_font,
+        )
+        y += 44
+        lab_text = (
+            f"Hb {latest_lab['hemoglobin']}, WBC {latest_lab['leukocytes']}, "
+            f"глюкоза {latest_lab['glucose']}, холестерин {latest_lab['cholesterol']}, "
+            f"CRP {latest_lab['crp']}. {latest_lab['ai_summary']}"
+        )
+        y = draw_wrapped_text(draw, lab_text, (96, y), text_font, "#3a3a3c", width - 192)
+    else:
+        draw.text((96, y), "Лабораторных анализов пока нет.", fill="#6e6e73", font=text_font)
+        y += 54
+
+    if latest_medical:
+        y += 18
+        medical_text = (
+            f"Последний медосмотр: АД {latest_medical['systolic']}/"
+            f"{latest_medical['diastolic']}, пульс {latest_medical['pulse']}, "
+            f"промилле {latest_medical['promille']}. "
+            f"ИИ: {latest_medical['ai_status']}. Врач: {latest_medical['doctor_status']}."
+        )
+        y = draw_wrapped_text(
+            draw,
+            medical_text,
+            (96, y),
+            text_font,
+            "#3a3a3c",
+            width - 192,
+        )
+
+    y = 1420
+    draw.rounded_rectangle((64, y, width - 64, y + 170), radius=22, fill="#eef6ff")
+    y += 28
+    disclaimer = (
+        "Документ создан в демонстрационной MVP-платформе. ИИ-вывод является "
+        "предварительным скринингом и не заменяет очную консультацию врача."
+    )
+    y = draw_wrapped_text(draw, disclaimer, (96, y), text_font, "#1d1d1f", width - 192)
+    draw.text(
+        (96, y + 20),
+        "Mock ЭЦП: SHA-256 подпись хранится после решения врача.",
+        fill="#6e6e73",
+        font=small_font,
+    )
+
+    buffer = io.BytesIO()
+    image.save(buffer, format="PDF", resolution=144.0)
+    return buffer.getvalue()
+
+
+@app.get("/api/person/{iin}/conclusion.pdf")
+def person_conclusion_pdf(iin: str) -> Response:
+    """Формирует PDF-заключение по цифровой карте пациента/сотрудника."""
+    timeline = load_person_timeline(iin)
+    pdf_bytes = build_conclusion_pdf(timeline)
+    filename = f"mydoctor-{iin}-conclusion.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.post("/api/diagnosis/submit")
