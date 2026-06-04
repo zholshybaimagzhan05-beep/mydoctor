@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mydoctor | Панель врача</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --apple-bg: #f5f5f7;
+      --apple-surface: rgba(255, 255, 255, 0.86);
+      --apple-ink: #1d1d1f;
+      --apple-muted: #6e6e73;
+      --apple-blue: #0071e3;
+      --apple-green: #34c759;
+      --apple-red: #ff3b30;
+      --apple-border: rgba(0, 0, 0, 0.10);
+    }
+    * {
+      letter-spacing: 0 !important;
+    }
+    html {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif !important;
+      background: linear-gradient(180deg, #fbfbfd 0%, var(--apple-bg) 48%, #ffffff 100%);
+      color: var(--apple-ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(251, 251, 253, 0.78) !important;
+      border-color: var(--apple-border) !important;
+      backdrop-filter: saturate(180%) blur(22px);
+    }
+    header nav, header > div > div:last-child {
+      border-radius: 999px;
+    }
+    h1, h2, h3 {
+      color: var(--apple-ink) !important;
+      font-weight: 650 !important;
+    }
+    .glass-panel {
+      background: var(--apple-surface) !important;
+      backdrop-filter: blur(16px);
+      border-color: var(--apple-border) !important;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.06) !important;
+    }
+    article {
+      background: rgba(255, 255, 255, 0.92) !important;
+      border-color: var(--apple-border) !important;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05) !important;
+    }
+    .rounded-lg, .rounded-md {
+      border-radius: 8px !important;
+    }
+    .border-sky-100, .border-sky-200, .border-emerald-100, .border-amber-100, .border-slate-100 {
+      border-color: var(--apple-border) !important;
+    }
+    .bg-white {
+      background: rgba(255, 255, 255, 0.86) !important;
+    }
+    .bg-sky-50, .bg-slate-50 {
+      background: #f8f8fa !important;
+    }
+    .bg-emerald-50 {
+      background: #ecfdf1 !important;
+    }
+    .bg-rose-50 {
+      background: #fff1f0 !important;
+    }
+    .bg-amber-50 {
+      background: #fff8e8 !important;
+    }
+    .text-sky-700, .text-sky-800 {
+      color: var(--apple-blue) !important;
+    }
+    .text-emerald-700, .text-emerald-800 {
+      color: #248a3d !important;
+    }
+    .text-rose-700, .text-rose-800 {
+      color: #d70015 !important;
+    }
+    .text-amber-700, .text-amber-800 {
+      color: #b25a00 !important;
+    }
+    .bg-sky-700 {
+      background: var(--apple-blue) !important;
+    }
+    .bg-emerald-600 {
+      background: var(--apple-green) !important;
+    }
+    .bg-rose-600 {
+      background: var(--apple-red) !important;
+    }
+    .hover\:bg-sky-800:hover {
+      background: #0077ed !important;
+    }
+    .hover\:bg-emerald-700:hover {
+      background: #30d158 !important;
+    }
+    .hover\:bg-rose-700:hover {
+      background: #ff453a !important;
+    }
+    button, a.rounded-md, a.inline-flex, a.block.rounded-md {
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-900">
+  <header class="border-b border-sky-100 bg-white/90 backdrop-blur">
+    <div class="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">mydoctor Doctor</p>
+        <h1 class="text-xl font-bold text-slate-950">Единая панель врача</h1>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="pollStatus" class="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+          Обновление каждые 3 сек.
+        </span>
+        <a href="/" class="rounded-md border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-800 transition hover:bg-sky-50">Платформа</a>
+        <a href="/patient" class="rounded-md border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-800 transition hover:bg-sky-50">Онлайн-диагностика</a>
+        <a href="/terminal" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-800">Медосмотр</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-5 py-8">
+    <section class="mb-6 grid gap-4 md:grid-cols-4">
+      <div class="glass-panel rounded-lg border border-sky-100 p-4 shadow-sm">
+        <p class="text-sm font-semibold text-slate-500">Медосмотры</p>
+        <p id="medicalPendingCount" class="mt-2 text-3xl font-bold text-slate-950">0</p>
+      </div>
+      <div class="glass-panel rounded-lg border border-sky-100 p-4 shadow-sm">
+        <p class="text-sm font-semibold text-slate-500">Онлайн-диагностика</p>
+        <p id="diagnosisPendingCount" class="mt-2 text-3xl font-bold text-slate-950">0</p>
+      </div>
+      <div class="glass-panel rounded-lg border border-sky-100 p-4 shadow-sm">
+        <p class="text-sm font-semibold text-slate-500">ИИ-скрининг</p>
+        <p class="mt-2 text-lg font-bold text-emerald-700">Активен</p>
+      </div>
+      <div class="glass-panel rounded-lg border border-sky-100 p-4 shadow-sm">
+        <p class="text-sm font-semibold text-slate-500">ЭЦП</p>
+        <p class="mt-2 text-lg font-bold text-sky-800">Mock SHA-256</p>
+      </div>
+    </section>
+
+    <section class="grid gap-6 xl:grid-cols-2">
+      <div class="glass-panel rounded-lg border border-sky-100 p-5 shadow-sm">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 class="text-lg font-bold">Предсменные медосмотры</h2>
+            <p class="mt-1 text-sm text-slate-500">Допуск сотрудника после приборов и ИИ-скрининга.</p>
+          </div>
+          <button id="refreshBtn" type="button" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+            Обновить
+          </button>
+        </div>
+
+        <div id="medicalGrid" class="grid gap-4"></div>
+        <div id="medicalEmpty" class="rounded-lg border border-dashed border-sky-200 bg-white/75 p-8 text-center">
+          <p class="text-lg font-bold text-slate-800">Очередь медосмотров пуста</p>
+          <p class="mt-2 text-sm text-slate-500">Карточки появятся после отправки показателей с терминала.</p>
+          <a href="/terminal" class="mt-5 inline-flex rounded-md bg-sky-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-800">
+            Перейти к терминалу
+          </a>
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-lg border border-sky-100 p-5 shadow-sm">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 class="text-lg font-bold">Онлайн-диагностика</h2>
+            <p class="mt-1 text-sm text-slate-500">Первичный диагноз, анализы и триаж для врача.</p>
+          </div>
+          <a href="/patient" class="rounded-md border border-sky-200 bg-white px-4 py-2 text-sm font-bold text-sky-800 transition hover:bg-sky-50">
+            Новое обращение
+          </a>
+        </div>
+
+        <div id="diagnosisGrid" class="grid gap-4"></div>
+        <div id="diagnosisEmpty" class="rounded-lg border border-dashed border-sky-200 bg-white/75 p-8 text-center">
+          <p class="text-lg font-bold text-slate-800">Онлайн-обращений нет</p>
+          <p class="mt-2 text-sm text-slate-500">Пациент может сдать анализы и пройти ИИ-опрос онлайн.</p>
+          <a href="/patient" class="mt-5 inline-flex rounded-md bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-700">
+            Открыть кабинет пациента
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="fixed bottom-5 right-5 hidden max-w-sm rounded-lg border border-emerald-100 bg-white p-4 text-sm text-slate-700 shadow-lg"></div>
+
+  <script>
+    const medicalGrid = document.getElementById("medicalGrid");
+    const diagnosisGrid = document.getElementById("diagnosisGrid");
+    const medicalEmpty = document.getElementById("medicalEmpty");
+    const diagnosisEmpty = document.getElementById("diagnosisEmpty");
+    const medicalPendingCount = document.getElementById("medicalPendingCount");
+    const diagnosisPendingCount = document.getElementById("diagnosisPendingCount");
+    const pollStatus = document.getElementById("pollStatus");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const toast = document.getElementById("toast");
+
+    let loading = false;
+    const processingMedical = new Set();
+    const processingDiagnosis = new Set();
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function riskBadgeClass(status) {
+      if (status === "Норма" || status === "Низкий риск") return "bg-emerald-50 text-emerald-700 border-emerald-100";
+      if (status === "Высокий риск" || String(status).includes("Критический")) return "bg-rose-50 text-rose-700 border-rose-100";
+      return "bg-amber-50 text-amber-700 border-amber-100";
+    }
+
+    function showToast(message, type = "success") {
+      const styles = {
+        success: "fixed bottom-5 right-5 max-w-sm rounded-lg border border-emerald-100 bg-white p-4 text-sm text-emerald-800 shadow-lg",
+        error: "fixed bottom-5 right-5 max-w-sm rounded-lg border border-rose-100 bg-white p-4 text-sm text-rose-800 shadow-lg",
+      };
+      toast.className = styles[type];
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => toast.classList.add("hidden"), 3500);
+    }
+
+    function medicalCard(session) {
+      const card = document.createElement("article");
+      card.className = "rounded-lg border border-sky-100 bg-white p-5 shadow-sm";
+      card.dataset.sessionId = session.id;
+      card.innerHTML = `
+        <div class="flex items-start gap-4">
+          <img src="${session.photo_template}" alt="Фото сотрудника" class="h-16 w-16 rounded-md border border-slate-100 object-cover shadow-sm" />
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-slate-950">${escapeHtml(session.fio)}</h3>
+                <p class="mt-1 text-sm text-slate-500">ИИН: ${escapeHtml(session.iin)}</p>
+                <p class="mt-1 text-xs text-slate-400">Сессия #${session.id}, ${escapeHtml(session.created_at)}</p>
+              </div>
+              <span class="rounded-full border px-3 py-1 text-xs font-bold ${riskBadgeClass(session.ai_status)}">${escapeHtml(session.ai_status)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">Давление</p><p class="mt-1 font-bold">${session.systolic}/${session.diastolic}</p></div>
+          <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">Пульс</p><p class="mt-1 font-bold">${session.pulse}</p></div>
+          <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">Промилле</p><p class="mt-1 font-bold">${Number(session.promille).toFixed(2)}</p></div>
+          <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">OpenCV</p><p class="mt-1 text-sm font-bold text-emerald-700">${escapeHtml(session.pupil_status)}</p></div>
+        </div>
+        <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+          <button type="button" data-medical-decision="Допущен" class="flex-1 rounded-md bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:bg-slate-300">Выдать допуск</button>
+          <button type="button" data-medical-decision="Отклонен" class="flex-1 rounded-md bg-rose-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-700 disabled:bg-slate-300">Отказать</button>
+        </div>
+      `;
+      return card;
+    }
+
+    function diagnosisCard(request) {
+      const card = document.createElement("article");
+      card.className = "rounded-lg border border-sky-100 bg-white p-5 shadow-sm";
+      card.dataset.diagnosisId = request.id;
+      const symptoms = (request.symptoms || []).map(escapeHtml).join(", ") || "Не выбраны";
+      const labBlock = request.lab_summary
+        ? `<div class="mt-4 rounded-md border border-sky-100 bg-sky-50 p-3">
+            <p class="text-xs font-bold uppercase tracking-[0.12em] text-sky-700">Последний анализ</p>
+            <p class="mt-2 text-sm text-slate-700">${escapeHtml(request.lab_summary)}</p>
+            <p class="mt-2 text-xs text-slate-500">Hb ${request.hemoglobin}, WBC ${request.leukocytes}, глюкоза ${request.glucose}, холестерин ${request.cholesterol}, CRP ${request.crp}</p>
+          </div>`
+        : `<div class="mt-4 rounded-md border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Анализы не приложены</div>`;
+
+      card.innerHTML = `
+        <div class="flex items-start gap-4">
+          <img src="${request.photo_template}" alt="Фото пациента" class="h-16 w-16 rounded-md border border-slate-100 object-cover shadow-sm" />
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-slate-950">${escapeHtml(request.fio)}</h3>
+                <p class="mt-1 text-sm text-slate-500">ИИН: ${escapeHtml(request.iin)} · ${escapeHtml(request.phone)}</p>
+                <p class="mt-1 text-xs text-slate-400">Обращение #${request.id}, ${escapeHtml(request.created_at)}</p>
+              </div>
+              <span class="rounded-full border px-3 py-1 text-xs font-bold ${riskBadgeClass(request.ai_triage)}">${escapeHtml(request.ai_triage)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 rounded-md bg-slate-50 p-3">
+          <p class="text-xs font-semibold text-slate-500">Жалоба</p>
+          <p class="mt-1 text-sm font-semibold text-slate-800">${escapeHtml(request.complaint)}</p>
+          <p class="mt-2 text-xs text-slate-500">Симптомы: ${symptoms}</p>
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">Темп.</p><p class="mt-1 font-bold">${request.temperature}</p></div>
+          <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">SpO2</p><p class="mt-1 font-bold">${request.oxygen}%</p></div>
+          <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">Пульс</p><p class="mt-1 font-bold">${request.pulse}</p></div>
+          <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">АД</p><p class="mt-1 font-bold">${request.systolic}/${request.diastolic}</p></div>
+        </div>
+        ${labBlock}
+        <div class="mt-4 rounded-md border border-emerald-100 bg-emerald-50 p-3">
+          <p class="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">ИИ-вывод</p>
+          <p class="mt-2 text-sm font-semibold text-slate-800">${escapeHtml(request.ai_diagnosis)}</p>
+          <p class="mt-2 text-sm text-slate-600">${escapeHtml(request.ai_recommendations)}</p>
+        </div>
+        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+          <button type="button" data-diagnosis-decision="Нужна консультация" class="rounded-md bg-sky-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-sky-800 disabled:bg-slate-300">Консультация</button>
+          <button type="button" data-diagnosis-decision="Низкий риск" class="rounded-md bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:bg-slate-300">Низкий риск</button>
+          <button type="button" data-diagnosis-decision="Срочно направить" class="rounded-md bg-rose-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-rose-700 disabled:bg-slate-300">Срочно</button>
+        </div>
+      `;
+      return card;
+    }
+
+    function renderMedical(sessions) {
+      const visible = sessions.filter((session) => !processingMedical.has(session.id));
+      medicalGrid.innerHTML = "";
+      visible.forEach((session) => medicalGrid.appendChild(medicalCard(session)));
+      medicalPendingCount.textContent = visible.length;
+      medicalEmpty.classList.toggle("hidden", visible.length > 0);
+    }
+
+    function renderDiagnosis(requests) {
+      const visible = requests.filter((request) => !processingDiagnosis.has(request.id));
+      diagnosisGrid.innerHTML = "";
+      visible.forEach((request) => diagnosisGrid.appendChild(diagnosisCard(request)));
+      diagnosisPendingCount.textContent = visible.length;
+      diagnosisEmpty.classList.toggle("hidden", visible.length > 0);
+    }
+
+    async function loadAll() {
+      if (loading || processingMedical.size > 0 || processingDiagnosis.size > 0) return;
+      loading = true;
+      refreshBtn.disabled = true;
+      try {
+        pollStatus.textContent = "Обновление...";
+        const [medicalResponse, diagnosisResponse] = await Promise.all([
+          fetch("/api/doctor/pending"),
+          fetch("/api/doctor/diagnosis/pending"),
+        ]);
+        const medical = await medicalResponse.json();
+        const diagnosis = await diagnosisResponse.json();
+        if (!medicalResponse.ok) throw new Error(medical.detail || "Не удалось загрузить медосмотры");
+        if (!diagnosisResponse.ok) throw new Error(diagnosis.detail || "Не удалось загрузить диагностику");
+        renderMedical(medical.sessions || []);
+        renderDiagnosis(diagnosis.requests || []);
+        pollStatus.textContent = "Обновление каждые 3 сек.";
+        pollStatus.className = "rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700";
+      } catch (error) {
+        pollStatus.textContent = "Ошибка обновления";
+        pollStatus.className = "rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700";
+        showToast(error.message, "error");
+      } finally {
+        loading = false;
+        refreshBtn.disabled = false;
+      }
+    }
+
+    async function decideMedical(sessionId, decision, card) {
+      if (processingMedical.has(sessionId)) return;
+      processingMedical.add(sessionId);
+      card.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+      try {
+        const response = await fetch("/api/doctor/decide", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId, decision }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Решение не сохранено");
+        card.remove();
+        medicalPendingCount.textContent = medicalGrid.querySelectorAll("article").length;
+        medicalEmpty.classList.toggle("hidden", medicalGrid.querySelectorAll("article").length > 0);
+        showToast(`${decision}: медосмотр подписан ЭЦП (${data.signature_hash.slice(0, 10)}...)`);
+      } catch (error) {
+        showToast(error.message, "error");
+        card.querySelectorAll("button").forEach((button) => { button.disabled = false; });
+      } finally {
+        processingMedical.delete(sessionId);
+      }
+    }
+
+    async function decideDiagnosis(diagnosisId, decision, card) {
+      if (processingDiagnosis.has(diagnosisId)) return;
+      processingDiagnosis.add(diagnosisId);
+      card.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+      try {
+        const response = await fetch("/api/doctor/diagnosis/decide", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ diagnosis_id: diagnosisId, decision }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Заключение не сохранено");
+        card.remove();
+        diagnosisPendingCount.textContent = diagnosisGrid.querySelectorAll("article").length;
+        diagnosisEmpty.classList.toggle("hidden", diagnosisGrid.querySelectorAll("article").length > 0);
+        showToast(`${decision}: онлайн-заключение подписано ЭЦП (${data.signature_hash.slice(0, 10)}...)`);
+      } catch (error) {
+        showToast(error.message, "error");
+        card.querySelectorAll("button").forEach((button) => { button.disabled = false; });
+      } finally {
+        processingDiagnosis.delete(diagnosisId);
+      }
+    }
+
+    medicalGrid.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-medical-decision]");
+      if (!button) return;
+      const card = button.closest("article");
+      decideMedical(Number(card.dataset.sessionId), button.dataset.medicalDecision, card);
+    });
+
+    diagnosisGrid.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-diagnosis-decision]");
+      if (!button) return;
+      const card = button.closest("article");
+      decideDiagnosis(Number(card.dataset.diagnosisId), button.dataset.diagnosisDecision, card);
+    });
+
+    refreshBtn.addEventListener("click", loadAll);
+    loadAll();
+    setInterval(loadAll, 3000);
+  </script>
+</body>
+</html>
