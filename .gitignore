@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+medcheck.sqlite3
+node_modules/
+outputs/
+*.app/
+update_free_link.command
+package.json
