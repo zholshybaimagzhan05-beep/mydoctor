@@ -40,6 +40,24 @@ app = FastAPI(
 )
 
 
+def render_page(request: Request, template_name: str) -> HTMLResponse:
+    """
+    Возвращает HTML-страницу с учетом разных версий FastAPI/Starlette.
+
+    В новых версиях Jinja2Templates ожидает request отдельным аргументом,
+    а в старых версиях request должен лежать внутри context. Такой небольшой
+    адаптер позволяет MVP запускаться и локально, и на бесплатном хостинге.
+    """
+    try:
+        return templates.TemplateResponse(
+            request=request,
+            name=template_name,
+            context={},
+        )
+    except TypeError:
+        return templates.TemplateResponse(template_name, {"request": request})
+
+
 # -----------------------------------------------------------------------------
 # Pydantic-модели входящих запросов.
 # -----------------------------------------------------------------------------
@@ -497,22 +515,22 @@ def create_signature_hash(session_id: int, decision: str) -> str:
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def platform_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(name="index.html", context={"request": request})
+    return render_page(request, "index.html")
 
 
 @app.get("/terminal", response_class=HTMLResponse, include_in_schema=False)
 def terminal_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(name="terminal.html", context={"request": request})
+    return render_page(request, "terminal.html")
 
 
 @app.get("/doctor", response_class=HTMLResponse, include_in_schema=False)
 def doctor_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(name="doctor.html", context={"request": request})
+    return render_page(request, "doctor.html")
 
 
 @app.get("/patient", response_class=HTMLResponse, include_in_schema=False)
 def patient_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(name="patient.html", context={"request": request})
+    return render_page(request, "patient.html")
 
 
 @app.get("/health")
