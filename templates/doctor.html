@@ -193,6 +193,20 @@
     </section>
   </main>
 
+  <div id="timelineModal" class="fixed inset-0 z-50 hidden bg-black/30 p-4 backdrop-blur-sm">
+    <div class="mx-auto flex max-h-[92vh] max-w-4xl flex-col overflow-hidden rounded-lg border border-sky-100 bg-white shadow-2xl">
+      <div class="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">Цифровая карта</p>
+          <h2 id="timelineTitle" class="mt-2 text-xl font-bold text-slate-950">Карта пациента</h2>
+          <p id="timelineSubtitle" class="mt-1 text-sm text-slate-500"></p>
+        </div>
+        <button id="timelineCloseBtn" type="button" class="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">Закрыть</button>
+      </div>
+      <div id="timelineContent" class="overflow-y-auto p-5"></div>
+    </div>
+  </div>
+
   <div id="toast" class="fixed bottom-5 right-5 hidden max-w-sm rounded-lg border border-emerald-100 bg-white p-4 text-sm text-slate-700 shadow-lg"></div>
 
   <script>
@@ -205,6 +219,11 @@
     const pollStatus = document.getElementById("pollStatus");
     const refreshBtn = document.getElementById("refreshBtn");
     const toast = document.getElementById("toast");
+    const timelineModal = document.getElementById("timelineModal");
+    const timelineTitle = document.getElementById("timelineTitle");
+    const timelineSubtitle = document.getElementById("timelineSubtitle");
+    const timelineContent = document.getElementById("timelineContent");
+    const timelineCloseBtn = document.getElementById("timelineCloseBtn");
 
     let loading = false;
     const processingMedical = new Set();
@@ -237,6 +256,83 @@
       showToast.timer = window.setTimeout(() => toast.classList.add("hidden"), 3500);
     }
 
+    function timelineRow(title, meta, body, status) {
+      return `
+        <article class="rounded-lg border border-sky-100 bg-white p-4">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 class="font-bold text-slate-950">${escapeHtml(title)}</h3>
+              <p class="mt-1 text-xs text-slate-500">${escapeHtml(meta)}</p>
+            </div>
+            <span class="rounded-full border px-3 py-1 text-xs font-bold ${riskBadgeClass(status)}">${escapeHtml(status)}</span>
+          </div>
+          <p class="mt-3 text-sm leading-6 text-slate-600">${escapeHtml(body)}</p>
+        </article>
+      `;
+    }
+
+    function closeTimeline() {
+      timelineModal.classList.add("hidden");
+    }
+
+    async function openTimeline(iin) {
+      timelineModal.classList.remove("hidden");
+      timelineTitle.textContent = "Загрузка карты...";
+      timelineSubtitle.textContent = "";
+      timelineContent.innerHTML = '<div class="rounded-lg border border-sky-100 bg-sky-50 p-6 text-sm font-semibold text-sky-800">Загружаем историю пациента...</div>';
+      try {
+        const response = await fetch(`/api/person/${encodeURIComponent(iin)}/timeline`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Карта не загружена");
+
+        const profile = data.profile;
+        const labs = data.labs || [];
+        const diagnoses = data.diagnoses || [];
+        const medicalSessions = data.medical_sessions || [];
+        timelineTitle.textContent = profile.fio;
+        timelineSubtitle.textContent = `${profile.role} · ИИН ${profile.iin} · ${profile.phone || "телефон не указан"}`;
+
+        const diagnosisHtml = diagnoses.map((item) => timelineRow(
+          `Онлайн-обращение #${item.id}`,
+          `${item.created_at} · ${item.ai_triage}`,
+          `${item.ai_diagnosis}. ${item.ai_recommendations}`,
+          item.doctor_status,
+        )).join("");
+
+        const labHtml = labs.map((item) => timelineRow(
+          item.lab_type,
+          item.created_at,
+          `Hb ${item.hemoglobin}, WBC ${item.leukocytes}, глюкоза ${item.glucose}, холестерин ${item.cholesterol}, CRP ${item.crp}. ${item.ai_summary}`,
+          "Анализ",
+        )).join("");
+
+        const medicalHtml = medicalSessions.map((item) => timelineRow(
+          `Медосмотр #${item.id}`,
+          item.created_at,
+          `АД ${item.systolic}/${item.diastolic}, пульс ${item.pulse}, промилле ${Number(item.promille).toFixed(2)}, OpenCV: ${item.pupil_status}`,
+          item.doctor_status || item.ai_status,
+        )).join("");
+
+        timelineContent.innerHTML = `
+          <div class="mb-5 grid gap-3 md:grid-cols-4">
+            <div class="rounded-lg border border-sky-100 bg-sky-50 p-4"><p class="text-xs font-semibold text-slate-500">Обращения</p><p class="mt-2 text-2xl font-bold">${diagnoses.length}</p></div>
+            <div class="rounded-lg border border-sky-100 bg-sky-50 p-4"><p class="text-xs font-semibold text-slate-500">Анализы</p><p class="mt-2 text-2xl font-bold">${labs.length}</p></div>
+            <div class="rounded-lg border border-sky-100 bg-sky-50 p-4"><p class="text-xs font-semibold text-slate-500">Медосмотры</p><p class="mt-2 text-2xl font-bold">${medicalSessions.length}</p></div>
+            <a href="/api/person/${encodeURIComponent(profile.iin)}/conclusion.pdf" class="rounded-lg border border-sky-100 bg-sky-700 p-4 text-center text-sm font-bold text-white transition hover:bg-sky-800">Скачать PDF</a>
+          </div>
+          <div class="grid gap-4">
+            ${diagnosisHtml || ""}
+            ${labHtml || ""}
+            ${medicalHtml || ""}
+            ${diagnosisHtml || labHtml || medicalHtml ? "" : '<div class="rounded-lg border border-dashed border-sky-200 bg-white p-8 text-center text-sm text-slate-500">История пока пустая.</div>'}
+          </div>
+        `;
+      } catch (error) {
+        timelineTitle.textContent = "Ошибка";
+        timelineContent.innerHTML = `<div class="rounded-lg border border-rose-100 bg-rose-50 p-6 text-sm text-rose-800">${escapeHtml(error.message)}</div>`;
+      }
+    }
+
     function medicalCard(session) {
       const card = document.createElement("article");
       card.className = "rounded-lg border border-sky-100 bg-white p-5 shadow-sm";
@@ -260,6 +356,10 @@
           <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">Пульс</p><p class="mt-1 font-bold">${session.pulse}</p></div>
           <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">Промилле</p><p class="mt-1 font-bold">${Number(session.promille).toFixed(2)}</p></div>
           <div class="rounded-md bg-slate-50 p-3"><p class="text-xs font-semibold text-slate-500">OpenCV</p><p class="mt-1 text-sm font-bold text-emerald-700">${escapeHtml(session.pupil_status)}</p></div>
+        </div>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <button type="button" data-open-timeline="${escapeHtml(session.iin)}" class="rounded-md border border-sky-200 bg-white px-4 py-3 text-sm font-bold text-sky-800 transition hover:bg-sky-50">Карта сотрудника</button>
+          <a href="/api/person/${encodeURIComponent(session.iin)}/conclusion.pdf" class="rounded-md border border-slate-200 bg-white px-4 py-3 text-center text-sm font-bold text-slate-800 transition hover:bg-slate-50">PDF-заключение</a>
         </div>
         <div class="mt-4 flex flex-col gap-3 sm:flex-row">
           <button type="button" data-medical-decision="Допущен" class="flex-1 rounded-md bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:bg-slate-300">Выдать допуск</button>
@@ -312,6 +412,10 @@
           <p class="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">ИИ-вывод</p>
           <p class="mt-2 text-sm font-semibold text-slate-800">${escapeHtml(request.ai_diagnosis)}</p>
           <p class="mt-2 text-sm text-slate-600">${escapeHtml(request.ai_recommendations)}</p>
+        </div>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <button type="button" data-open-timeline="${escapeHtml(request.iin)}" class="rounded-md border border-sky-200 bg-white px-4 py-3 text-sm font-bold text-sky-800 transition hover:bg-sky-50">Карта пациента</button>
+          <a href="/api/person/${encodeURIComponent(request.iin)}/conclusion.pdf" class="rounded-md border border-slate-200 bg-white px-4 py-3 text-center text-sm font-bold text-slate-800 transition hover:bg-slate-50">PDF-заключение</a>
         </div>
         <div class="mt-4 grid gap-3 sm:grid-cols-3">
           <button type="button" data-diagnosis-decision="Нужна консультация" class="rounded-md bg-sky-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-sky-800 disabled:bg-slate-300">Консультация</button>
@@ -426,6 +530,17 @@
       if (!button) return;
       const card = button.closest("article");
       decideDiagnosis(Number(card.dataset.diagnosisId), button.dataset.diagnosisDecision, card);
+    });
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-open-timeline]");
+      if (!button) return;
+      openTimeline(button.dataset.openTimeline);
+    });
+
+    timelineCloseBtn.addEventListener("click", closeTimeline);
+    timelineModal.addEventListener("click", (event) => {
+      if (event.target === timelineModal) closeTimeline();
     });
 
     refreshBtn.addEventListener("click", loadAll);
