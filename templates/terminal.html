@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mydoctor | Терминал</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --apple-bg: #f5f5f7;
+      --apple-surface: rgba(255, 255, 255, 0.86);
+      --apple-ink: #1d1d1f;
+      --apple-muted: #6e6e73;
+      --apple-blue: #0071e3;
+      --apple-green: #34c759;
+      --apple-red: #ff3b30;
+      --apple-border: rgba(0, 0, 0, 0.10);
+    }
+    * {
+      letter-spacing: 0 !important;
+    }
+    html {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif !important;
+      background: linear-gradient(180deg, #fbfbfd 0%, var(--apple-bg) 48%, #ffffff 100%);
+      color: var(--apple-ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(251, 251, 253, 0.78) !important;
+      border-color: var(--apple-border) !important;
+      backdrop-filter: saturate(180%) blur(22px);
+    }
+    header nav {
+      border: 1px solid var(--apple-border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      padding: 4px;
+    }
+    header nav a {
+      border-color: transparent !important;
+      border-radius: 999px !important;
+    }
+    h1, h2, h3 {
+      color: var(--apple-ink) !important;
+      font-weight: 650 !important;
+    }
+    video {
+      transform: scaleX(-1);
+    }
+    .glass-panel {
+      background: var(--apple-surface) !important;
+      backdrop-filter: blur(16px);
+      border-color: var(--apple-border) !important;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.06) !important;
+    }
+    .rounded-lg, .rounded-md {
+      border-radius: 8px !important;
+    }
+    .border-sky-100, .border-sky-200, .border-emerald-100, .border-emerald-200, .border-slate-200 {
+      border-color: var(--apple-border) !important;
+    }
+    .bg-white {
+      background: rgba(255, 255, 255, 0.86) !important;
+    }
+    .bg-sky-50, .bg-slate-50 {
+      background: #f8f8fa !important;
+    }
+    .bg-emerald-50 {
+      background: #ecfdf1 !important;
+    }
+    .bg-rose-50 {
+      background: #fff1f0 !important;
+    }
+    .bg-amber-50 {
+      background: #fff8e8 !important;
+    }
+    .text-sky-700, .text-sky-800 {
+      color: var(--apple-blue) !important;
+    }
+    .text-emerald-700 {
+      color: #248a3d !important;
+    }
+    .text-rose-700 {
+      color: #d70015 !important;
+    }
+    .bg-sky-700, .enabled\:bg-emerald-600:enabled {
+      background: var(--apple-blue) !important;
+    }
+    .bg-emerald-600 {
+      background: var(--apple-green) !important;
+    }
+    .hover\:bg-sky-800:hover, .enabled\:hover\:bg-emerald-700:hover:enabled {
+      background: #0077ed !important;
+    }
+    .hover\:bg-emerald-700:hover {
+      background: #30d158 !important;
+    }
+    input, select, textarea {
+      min-height: 40px;
+      border-color: #d2d2d7 !important;
+      background: rgba(255, 255, 255, 0.92) !important;
+      box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.02);
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--apple-blue) !important;
+      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.16) !important;
+    }
+    button, a.rounded-md, a.inline-flex, a.block.rounded-md {
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-900">
+  <header class="border-b border-sky-100 bg-white/90 backdrop-blur">
+    <div class="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">mydoctor ID</p>
+        <h1 class="text-xl font-bold text-slate-950">Терминал электронного медосмотра</h1>
+      </div>
+      <nav class="flex flex-wrap items-center gap-2">
+        <a href="/" class="rounded-md border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-800 transition hover:bg-sky-50">
+          Платформа
+        </a>
+        <a href="/patient" class="rounded-md border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-800 transition hover:bg-sky-50">
+          Онлайн-диагностика
+        </a>
+        <a href="/doctor" class="rounded-md bg-sky-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-800">
+          Панель врача
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-5 py-8">
+    <section class="mb-6 grid gap-3 md:grid-cols-3">
+      <div id="stepIdentity" class="rounded-lg border border-sky-200 bg-sky-50 p-4">
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">Шаг 1</p>
+        <p class="mt-2 font-bold text-slate-950">Digital ID</p>
+        <p class="mt-1 text-sm text-slate-600">Ожидает сканирования</p>
+      </div>
+      <div id="stepVitals" class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Шаг 2</p>
+        <p class="mt-2 font-bold text-slate-950">Показатели</p>
+        <p class="mt-1 text-sm text-slate-500">Откроется после идентификации</p>
+      </div>
+      <div id="stepDoctor" class="rounded-lg border border-slate-200 bg-white p-4">
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Шаг 3</p>
+        <p class="mt-2 font-bold text-slate-950">Очередь врача</p>
+        <p class="mt-1 text-sm text-slate-500">Появится после отправки</p>
+      </div>
+    </section>
+
+    <section class="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+      <div class="glass-panel rounded-lg border border-sky-100 p-5 shadow-sm">
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 class="text-lg font-bold">Биометрическая идентификация</h2>
+            <p class="mt-1 text-sm leading-6 text-slate-500">
+              Камера используется для демо-кадра. Если доступа нет, сценарий продолжится через безопасный демо-режим.
+            </p>
+          </div>
+          <span id="cameraStatus" class="w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+            Камера запускается
+          </span>
+        </div>
+
+        <div class="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-950">
+          <video id="video" class="aspect-video w-full object-cover" autoplay playsinline muted></video>
+          <div id="videoOverlay" class="absolute inset-0 flex items-center justify-center bg-slate-950/70 px-6 text-center text-sm font-semibold text-white">
+            Подготовка камеры...
+          </div>
+          <canvas id="canvas" class="hidden"></canvas>
+        </div>
+
+        <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+          <button id="startBtn" type="button" class="rounded-md bg-sky-700 px-4 py-3 text-sm font-bold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+            Сканировать лицо
+          </button>
+          <button id="demoAuthBtn" type="button" class="rounded-md border border-sky-200 bg-white px-4 py-3 text-sm font-bold text-sky-800 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:text-slate-400">
+            Демо без камеры
+          </button>
+        </div>
+
+        <div class="mt-4 rounded-lg border border-sky-100 bg-sky-50 p-4">
+          <label class="block">
+            <span class="text-sm font-semibold text-sky-900">Демо-сотрудник</span>
+            <select id="employeeSelect" class="mt-2 w-full rounded-md border border-sky-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100">
+              <option value="">Загрузка сотрудников...</option>
+            </select>
+          </label>
+          <p class="mt-2 text-xs leading-5 text-slate-500">
+            В реальном продукте список заменяется eGov Digital ID. В MVP он нужен, чтобы кнопки работали даже без камеры.
+          </p>
+        </div>
+
+        <div id="employeeBox" class="mt-4 hidden rounded-lg border border-emerald-100 bg-emerald-50 p-4">
+          <div class="flex items-center gap-4">
+            <img id="employeePhoto" class="h-16 w-16 rounded-md border border-white object-cover shadow-sm" alt="Фото сотрудника" />
+            <div>
+              <p id="employeeName" class="font-bold text-slate-950"></p>
+              <p id="employeeIin" class="text-sm text-slate-600"></p>
+              <p id="employeeMeta" class="mt-1 text-xs font-semibold text-emerald-700"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-lg border border-sky-100 p-5 shadow-sm">
+        <div class="mb-4">
+          <h2 class="text-lg font-bold">Показатели приборов</h2>
+          <p class="mt-1 text-sm leading-6 text-slate-500">
+            Значения вводятся вручную для демонстрации без тонометра и алкотестера.
+          </p>
+        </div>
+
+        <form id="vitalsForm" class="space-y-4">
+          <input id="iinInput" type="hidden" />
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-700">Систолическое давление</span>
+              <input id="systolic" type="number" value="125" min="60" max="250" class="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100" required />
+            </label>
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-700">Диастолическое давление</span>
+              <input id="diastolic" type="number" value="80" min="40" max="160" class="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100" required />
+            </label>
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-700">Пульс</span>
+              <input id="pulse" type="number" value="76" min="30" max="220" class="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100" required />
+            </label>
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-700">Промилле</span>
+              <input id="promille" type="number" value="0.0" min="0" max="5" step="0.01" class="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100" required />
+            </label>
+          </div>
+
+          <button id="submitBtn" type="submit" disabled class="w-full rounded-md bg-slate-300 px-4 py-3 text-sm font-bold text-white transition enabled:bg-emerald-600 enabled:hover:bg-emerald-700 disabled:cursor-not-allowed">
+            Сначала подтвердите сотрудника
+          </button>
+        </form>
+
+        <div id="resultBox" class="mt-5 hidden rounded-lg border p-4 text-sm"></div>
+        <div id="nextActions" class="mt-4 hidden grid gap-3 sm:grid-cols-2">
+          <a href="/doctor" class="rounded-md bg-sky-700 px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-sky-800">
+            Открыть панель врача
+          </a>
+          <button id="resetBtn" type="button" class="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+            Новый осмотр
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Состояние терминала: после успешного Digital ID сохраняем сотрудника,
+    // чтобы разблокировать отправку показателей врачу.
+    let currentEmployee = null;
+    let cameraReady = false;
+    let demoEmployees = [];
+
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const startBtn = document.getElementById("startBtn");
+    const demoAuthBtn = document.getElementById("demoAuthBtn");
+    const submitBtn = document.getElementById("submitBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const cameraStatus = document.getElementById("cameraStatus");
+    const videoOverlay = document.getElementById("videoOverlay");
+    const employeeBox = document.getElementById("employeeBox");
+    const employeeSelect = document.getElementById("employeeSelect");
+    const resultBox = document.getElementById("resultBox");
+    const nextActions = document.getElementById("nextActions");
+
+    const stepIdentity = document.getElementById("stepIdentity");
+    const stepVitals = document.getElementById("stepVitals");
+    const stepDoctor = document.getElementById("stepDoctor");
+
+    function setStepState(element, status, text) {
+      const styles = {
+        active: "rounded-lg border border-sky-200 bg-sky-50 p-4",
+        done: "rounded-lg border border-emerald-200 bg-emerald-50 p-4",
+        wait: "rounded-lg border border-slate-200 bg-white p-4",
+      };
+      element.className = styles[status];
+      element.querySelector("p:last-child").textContent = text;
+      element.querySelector("p:first-child").className =
+        status === "wait"
+          ? "text-xs font-bold uppercase tracking-[0.14em] text-slate-400"
+          : "text-xs font-bold uppercase tracking-[0.14em] text-sky-700";
+    }
+
+    function showResult(message, type = "info") {
+      const styles = {
+        info: "border-sky-100 bg-sky-50 text-sky-800",
+        success: "border-emerald-100 bg-emerald-50 text-emerald-800",
+        error: "border-rose-100 bg-rose-50 text-rose-800",
+      };
+      resultBox.className = `mt-5 rounded-lg border p-4 text-sm ${styles[type]}`;
+      resultBox.textContent = message;
+      resultBox.classList.remove("hidden");
+    }
+
+    function selectedDemoEmployee() {
+      return demoEmployees.find((employee) => String(employee.id) === employeeSelect.value) || demoEmployees[0] || null;
+    }
+
+    async function loadDemoEmployees() {
+      try {
+        const response = await fetch("/api/employees/demo");
+        if (!response.ok) throw new Error("Не удалось загрузить демо-сотрудников");
+        const data = await response.json();
+        demoEmployees = data.employees || [];
+        employeeSelect.innerHTML = demoEmployees
+          .map((employee) => `<option value="${employee.id}">${employee.fio} - ${employee.iin}</option>`)
+          .join("");
+        demoAuthBtn.disabled = demoEmployees.length === 0;
+      } catch (error) {
+        employeeSelect.innerHTML = '<option value="">Демо-сотрудники недоступны</option>';
+        demoAuthBtn.disabled = true;
+        showResult(error.message, "error");
+      }
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        cameraStatus.textContent = "Демо-режим";
+        cameraStatus.className = "w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700";
+        videoOverlay.textContent = "Камера недоступна. Можно нажать «Демо без камеры».";
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+        video.srcObject = stream;
+        await video.play();
+        cameraReady = true;
+        cameraStatus.textContent = "Камера активна";
+        cameraStatus.className = "w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700";
+        videoOverlay.classList.add("hidden");
+      } catch (error) {
+        cameraReady = false;
+        cameraStatus.textContent = "Демо-режим";
+        cameraStatus.className = "w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700";
+        videoOverlay.textContent = "Нет доступа к камере. Используйте демо-сканирование.";
+        showResult("Камера недоступна, но MVP можно пройти через кнопку «Демо без камеры».", "info");
+      }
+    }
+
+    function fallbackFrame() {
+      const employee = selectedDemoEmployee();
+      if (employee && employee.photo_template) return employee.photo_template;
+
+      canvas.width = 640;
+      canvas.height = 480;
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#e0f2fe";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#0369a1";
+      context.font = "bold 28px Arial";
+      context.fillText("mydoctor Demo ID", 190, 245);
+      return canvas.toDataURL("image/png");
+    }
+
+    function captureFrame() {
+      if (!cameraReady || video.readyState < 2 || !video.videoWidth) {
+        return fallbackFrame();
+      }
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const context = canvas.getContext("2d");
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.86);
+    }
+
+    function applyEmployee(employee, modeLabel) {
+      currentEmployee = employee;
+      document.getElementById("employeePhoto").src = employee.photo_template;
+      document.getElementById("employeeName").textContent = employee.fio;
+      document.getElementById("employeeIin").textContent = `ИИН: ${employee.iin}`;
+      document.getElementById("employeeMeta").textContent = `${employee.egov_status}, ${modeLabel}, уверенность ${employee.confidence}`;
+      document.getElementById("iinInput").value = employee.iin;
+      employeeBox.classList.remove("hidden");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Отправить данные врачу";
+      setStepState(stepIdentity, "done", "Сотрудник подтвержден");
+      setStepState(stepVitals, "active", "Введите показатели приборов");
+      showResult(`${employee.fio} идентифицирован. Теперь можно отправить показатели врачу.`, "success");
+    }
+
+    async function authenticate(imageData, modeLabel) {
+      startBtn.disabled = true;
+      demoAuthBtn.disabled = true;
+      startBtn.textContent = "Сканирование...";
+      showResult("Выполняется проверка через mock eGov Digital ID.", "info");
+
+      try {
+        const response = await fetch("/api/auth/face", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image_data: imageData }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Не удалось подтвердить личность");
+        applyEmployee(data, modeLabel);
+      } catch (error) {
+        showResult(error.message, "error");
+      } finally {
+        startBtn.disabled = false;
+        demoAuthBtn.disabled = demoEmployees.length === 0;
+        startBtn.textContent = "Сканировать лицо";
+      }
+    }
+
+    startBtn.addEventListener("click", async () => {
+      if (!cameraReady) await startCamera();
+      await authenticate(captureFrame(), cameraReady ? "камера" : "демо-кадр");
+    });
+
+    demoAuthBtn.addEventListener("click", async () => {
+      const employee = selectedDemoEmployee();
+      if (!employee) {
+        showResult("Демо-сотрудник не выбран.", "error");
+        return;
+      }
+      await authenticate(employee.photo_template, "демо без камеры");
+    });
+
+    document.getElementById("vitalsForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!currentEmployee) {
+        showResult("Сначала подтвердите сотрудника через Digital ID или демо-режим.", "error");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Отправка...";
+
+      const payload = {
+        iin: currentEmployee.iin,
+        systolic: Number(document.getElementById("systolic").value),
+        diastolic: Number(document.getElementById("diastolic").value),
+        pulse: Number(document.getElementById("pulse").value),
+        promille: Number(document.getElementById("promille").value),
+      };
+
+      try {
+        const response = await fetch("/api/vitals/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Сервер не принял показатели");
+        showResult(`${data.message}. Вердикт ИИ: ${data.ai_status}.`, "success");
+        nextActions.classList.remove("hidden");
+        setStepState(stepVitals, "done", "Показатели отправлены");
+        setStepState(stepDoctor, "active", "Ожидает решения врача");
+      } catch (error) {
+        showResult(error.message, "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Отправить данные врачу";
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      currentEmployee = null;
+      employeeBox.classList.add("hidden");
+      nextActions.classList.add("hidden");
+      resultBox.classList.add("hidden");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Сначала подтвердите сотрудника";
+      setStepState(stepIdentity, "active", "Ожидает сканирования");
+      setStepState(stepVitals, "wait", "Откроется после идентификации");
+      setStepState(stepDoctor, "wait", "Появится после отправки");
+    });
+
+    loadDemoEmployees();
+    startCamera();
+  </script>
+</body>
+</html>
