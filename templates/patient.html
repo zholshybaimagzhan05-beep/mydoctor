@@ -219,6 +219,57 @@
         box-shadow: 0 30px 80px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
       }
     }
+    .ai-console {
+      border: 1px solid rgba(10, 132, 255, 0.18);
+      background: linear-gradient(135deg, rgba(255,255,255,0.72), rgba(236,253,241,0.46));
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    .ai-node {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.48);
+      color: #64748b;
+    }
+    .ai-node.is-active {
+      border-color: rgba(10, 132, 255, 0.42);
+      background: rgba(10, 132, 255, 0.10);
+      color: #075985;
+      box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.08);
+    }
+    .ai-node.is-done {
+      border-color: rgba(48, 209, 88, 0.40);
+      background: rgba(48, 209, 88, 0.12);
+      color: #166534;
+    }
+    .ai-pulse {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #0a84ff;
+      animation: aiPulse 1.55s ease-out infinite;
+    }
+    .ai-progress {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+    .ai-progress span {
+      display: block;
+      height: 100%;
+      width: 18%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #0a84ff, #30d158);
+      transition: width 420ms ease;
+    }
+    .ai-chip {
+      border: 1px solid rgba(10, 132, 255, 0.16);
+      background: rgba(255, 255, 255, 0.46);
+    }
+    @keyframes aiPulse {
+      70% { box-shadow: 0 0 0 12px rgba(10, 132, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0); }
+    }
   </style>
 </head>
 <body class="min-h-screen text-slate-900">
@@ -281,6 +332,35 @@
           <p class="mt-1 text-sm text-slate-500">ИИ-триаж и врач</p>
         </div>
       </div>
+    </section>
+
+    <section class="ai-console mb-6 rounded-lg p-5">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="ai-pulse"></span>
+            <p class="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">AI clinical reasoning</p>
+          </div>
+          <h2 class="mt-2 text-lg font-bold">Что ИИ анализирует сейчас</h2>
+          <p id="patientAiNarration" class="mt-2 text-sm leading-6 text-slate-600">Выберите пациента: ИИ подготовит карту, анализы, симптомы и триаж.</p>
+        </div>
+        <div class="min-w-full lg:min-w-[360px]">
+          <div class="mb-2 flex items-center justify-between text-xs font-semibold text-slate-500">
+            <span>Прогресс клинического скрининга</span>
+            <span id="patientAiProgressText">18%</span>
+          </div>
+          <div class="ai-progress"><span id="patientAiProgressFill"></span></div>
+        </div>
+      </div>
+      <div class="mt-4 grid gap-3 md:grid-cols-6">
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-patient-ai-node="profile">Карта</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-patient-ai-node="lab">Анализы</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-patient-ai-node="symptoms">Симптомы</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-patient-ai-node="vitals">Витальные</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-patient-ai-node="triage">Триаж</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-patient-ai-node="doctor">Врач</div>
+      </div>
+      <div id="patientAiEvidence" class="mt-4 flex flex-wrap gap-2"></div>
     </section>
 
     <section class="grid gap-6 lg:grid-cols-2">
@@ -456,6 +536,23 @@
     const historyLabsCount = document.getElementById("historyLabsCount");
     const historyDiagnosisCount = document.getElementById("historyDiagnosisCount");
     const historyLastStatus = document.getElementById("historyLastStatus");
+    const patientAiNarration = document.getElementById("patientAiNarration");
+    const patientAiProgressFill = document.getElementById("patientAiProgressFill");
+    const patientAiProgressText = document.getElementById("patientAiProgressText");
+    const patientAiEvidence = document.getElementById("patientAiEvidence");
+    const patientAiNodes = Array.from(document.querySelectorAll("[data-patient-ai-node]"));
+
+    function setPatientAi(doneNodes, activeNode, narration, progress, evidence = []) {
+      patientAiNodes.forEach((node) => {
+        node.classList.remove("is-active", "is-done");
+        if (doneNodes.includes(node.dataset.patientAiNode)) node.classList.add("is-done");
+        if (node.dataset.patientAiNode === activeNode) node.classList.add("is-active");
+      });
+      patientAiNarration.textContent = narration;
+      patientAiProgressFill.style.width = `${progress}%`;
+      patientAiProgressText.textContent = `${progress}%`;
+      patientAiEvidence.innerHTML = evidence.map((item) => `<span class="ai-chip rounded-full px-3 py-1 text-xs font-semibold text-slate-700">${escapeHtml(item)}</span>`).join("");
+    }
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -489,6 +586,7 @@
       document.getElementById("patientPhone").textContent = patient.phone;
       patientCard.classList.remove("hidden");
       patientPdfLink.href = `/api/person/${encodeURIComponent(patient.iin)}/conclusion.pdf`;
+      setPatientAi(["profile"], "lab", `Карта ${patient.fio} загружена. Жду лабораторные показатели или жалобу.`, 24, [`ИИН ${patient.iin}`, patient.phone]);
       loadLatestLab();
       loadTimeline();
     }
@@ -600,6 +698,7 @@
       if (!currentPatient) return;
       labSubmitBtn.disabled = true;
       labSubmitBtn.textContent = "Сохранение анализа...";
+      setPatientAi(["profile"], "lab", "Проверяю гемоглобин, лейкоциты, глюкозу, холестерин и CRP по клиническим порогам.", 42);
 
       const payload = {
         iin: currentPatient.iin,
@@ -621,6 +720,12 @@
         if (!response.ok) throw new Error(data.detail || "Анализ не сохранен");
         latestLabId = data.lab_result_id;
         showBox(labResultBox, `<strong>${data.message}</strong><br>${data.ai_summary}`, "success");
+        setPatientAi(["profile", "lab"], "symptoms", `Анализ сохранён. ${data.ai_summary}. Теперь ИИ ждёт симптомы и витальные показатели.`, 58, [
+          `Hb ${payload.hemoglobin}`,
+          `WBC ${payload.leukocytes}`,
+          `Глюкоза ${payload.glucose}`,
+          `CRP ${payload.crp}`,
+        ]);
         loadTimeline();
       } catch (error) {
         showBox(labResultBox, error.message, "warning");
@@ -635,6 +740,7 @@
       if (!currentPatient) return;
       diagnosisSubmitBtn.disabled = true;
       diagnosisSubmitBtn.textContent = "ИИ анализирует обращение...";
+      setPatientAi(["profile", "lab", "symptoms"], "vitals", "Собираю жалобу, симптомы, температуру, давление, пульс и SpO2 в единый клинический профиль.", 72);
 
       const symptoms = Array.from(document.querySelectorAll(".symptom:checked")).map((item) => item.value);
       const payload = {
@@ -659,6 +765,12 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Обращение не отправлено");
         const type = data.ai_triage === "Высокий риск" ? "warning" : "success";
+        const evidence = [
+          `Температура ${payload.temperature}`,
+          `SpO2 ${payload.oxygen}%`,
+          `АД ${payload.systolic}/${payload.diastolic}`,
+          symptoms.length ? `Симптомы: ${symptoms.join(", ")}` : "Симптомы не выбраны",
+        ];
         showBox(
           diagnosisResultBox,
           `<strong>${data.message}</strong><br>
@@ -667,6 +779,7 @@
           <span class="font-bold">Рекомендации:</span> ${data.ai_recommendations}`,
           type,
         );
+        setPatientAi(["profile", "lab", "symptoms", "vitals", "triage"], "doctor", `ИИ присвоил триаж: ${data.ai_triage}. Обращение передано врачу с объяснимыми факторами.`, 100, evidence);
         doctorAction.classList.remove("hidden");
         loadTimeline();
       } catch (error) {
