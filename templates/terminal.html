@@ -222,6 +222,54 @@
         box-shadow: 0 30px 80px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
       }
     }
+    .ai-console {
+      border: 1px solid rgba(10, 132, 255, 0.18);
+      background: linear-gradient(135deg, rgba(255,255,255,0.72), rgba(235,245,255,0.46));
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+    }
+    .ai-node {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(255, 255, 255, 0.48);
+      color: #64748b;
+    }
+    .ai-node.is-active {
+      border-color: rgba(10, 132, 255, 0.42);
+      background: rgba(10, 132, 255, 0.10);
+      color: #075985;
+      box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.08);
+    }
+    .ai-node.is-done {
+      border-color: rgba(48, 209, 88, 0.40);
+      background: rgba(48, 209, 88, 0.12);
+      color: #166534;
+    }
+    .ai-pulse {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #0a84ff;
+      box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.34);
+      animation: aiPulse 1.55s ease-out infinite;
+    }
+    .ai-progress {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+    .ai-progress span {
+      display: block;
+      height: 100%;
+      width: 16%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #0a84ff, #30d158);
+      transition: width 420ms ease;
+    }
+    @keyframes aiPulse {
+      70% { box-shadow: 0 0 0 12px rgba(10, 132, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(10, 132, 255, 0); }
+    }
   </style>
 </head>
 <body class="min-h-screen text-slate-900">
@@ -261,6 +309,33 @@
         <p class="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Шаг 3</p>
         <p class="mt-2 font-bold text-slate-950">Очередь врача</p>
         <p class="mt-1 text-sm text-slate-500">Появится после отправки</p>
+      </div>
+    </section>
+
+    <section class="ai-console mb-6 rounded-lg p-5">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="ai-pulse"></span>
+            <p class="text-xs font-bold uppercase tracking-[0.14em] text-sky-700">AI reasoning layer</p>
+          </div>
+          <h2 class="mt-2 text-lg font-bold">Как ИИ анализирует медосмотр</h2>
+          <p id="aiNarration" class="mt-2 text-sm leading-6 text-slate-600">Ожидаю кадр Digital ID и показатели приборов.</p>
+        </div>
+        <div class="min-w-full lg:min-w-[360px]">
+          <div class="mb-2 flex items-center justify-between text-xs font-semibold text-slate-500">
+            <span>Уверенность анализа</span>
+            <span id="aiProgressText">16%</span>
+          </div>
+          <div class="ai-progress"><span id="aiProgressFill"></span></div>
+        </div>
+      </div>
+      <div class="mt-4 grid gap-3 md:grid-cols-5">
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-ai-node="capture">Кадр лица</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-ai-node="identity">Digital ID</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-ai-node="vision">OpenCV зрачки</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-ai-node="risk">Показатели риска</div>
+        <div class="ai-node rounded-md p-3 text-sm font-semibold" data-ai-node="doctor">Очередь врача</div>
       </div>
     </section>
 
@@ -390,6 +465,28 @@
     const stepIdentity = document.getElementById("stepIdentity");
     const stepVitals = document.getElementById("stepVitals");
     const stepDoctor = document.getElementById("stepDoctor");
+    const aiNarration = document.getElementById("aiNarration");
+    const aiProgressFill = document.getElementById("aiProgressFill");
+    const aiProgressText = document.getElementById("aiProgressText");
+    const aiNodes = Array.from(document.querySelectorAll("[data-ai-node]"));
+
+    function setAiState(doneNodes, activeNode, narration, progress) {
+      aiNodes.forEach((node) => {
+        node.classList.remove("is-active", "is-done");
+        if (doneNodes.includes(node.dataset.aiNode)) node.classList.add("is-done");
+        if (node.dataset.aiNode === activeNode) node.classList.add("is-active");
+      });
+      aiNarration.textContent = narration;
+      aiProgressFill.style.width = `${progress}%`;
+      aiProgressText.textContent = `${progress}%`;
+    }
+
+    function healthExplanation(payload, aiStatus) {
+      if (payload.promille > 0) return `Алкотестер показал ${payload.promille.toFixed(2)} промилле, поэтому ИИ поднимает критический риск.`;
+      if (payload.systolic > 140 || payload.diastolic > 90) return `Давление ${payload.systolic}/${payload.diastolic} выше порога 140/90, ИИ просит врача проверить допуск.`;
+      if (payload.pulse > 90) return `Пульс ${payload.pulse} выше рабочего порога, ИИ отмечает возможную нагрузку или стресс.`;
+      return `Давление ${payload.systolic}/${payload.diastolic}, пульс ${payload.pulse}, промилле ${payload.promille.toFixed(2)}: критичных отклонений не найдено. Вердикт: ${aiStatus}.`;
+    }
 
     function setStepState(element, status, text) {
       const styles = {
@@ -508,6 +605,7 @@
       demoAuthBtn.disabled = true;
       startBtn.textContent = "Сканирование...";
       showResult("Выполняется проверка через mock eGov Digital ID.", "info");
+      setAiState(["capture"], "identity", "Извлекаю биометрический шаблон и сверяю его с mock eGov Digital ID.", 34);
 
       try {
         const response = await fetch("/api/auth/face", {
@@ -518,8 +616,10 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Не удалось подтвердить личность");
         applyEmployee(data, modeLabel);
+        setAiState(["capture", "identity", "vision"], "risk", "Личность подтверждена. OpenCV-проверка зрачков в норме, жду показатели приборов.", 62);
       } catch (error) {
         showResult(error.message, "error");
+        setAiState(["capture"], "identity", "ИИ не смог завершить идентификацию. Проверьте кадр или используйте демо-режим.", 24);
       } finally {
         startBtn.disabled = false;
         demoAuthBtn.disabled = demoEmployees.length === 0;
@@ -550,6 +650,7 @@
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Отправка...";
+      setAiState(["capture", "identity", "vision"], "risk", "Сравниваю давление, пульс и промилле с порогами допуска.", 78);
 
       const payload = {
         iin: currentEmployee.iin,
@@ -568,6 +669,7 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Сервер не принял показатели");
         showResult(`${data.message}. Вердикт ИИ: ${data.ai_status}.`, "success");
+        setAiState(["capture", "identity", "vision", "risk"], "doctor", healthExplanation(payload, data.ai_status), 100);
         nextActions.classList.remove("hidden");
         setStepState(stepVitals, "done", "Показатели отправлены");
         setStepState(stepDoctor, "active", "Ожидает решения врача");
@@ -589,6 +691,7 @@
       setStepState(stepIdentity, "active", "Ожидает сканирования");
       setStepState(stepVitals, "wait", "Откроется после идентификации");
       setStepState(stepDoctor, "wait", "Появится после отправки");
+      setAiState([], "capture", "Ожидаю кадр Digital ID и показатели приборов.", 16);
     });
 
     loadDemoEmployees();
